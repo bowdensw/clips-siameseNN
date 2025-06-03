@@ -7,15 +7,15 @@ from torch.utils.data import Dataset, DataLoader
 import random
 
 # ----------------------------
-# Define the Siamese Pair Classifier/Build Architecture
+# Define the Siamese Pair Classifier (aka build NN architecture)
 # ----------------------------
 class SiamesePairClassifier(nn.Module):
     def __init__(self):
         super().__init__()
-        # Shared branch layers (4 → 16 → 16)
+        # shared branch layers (4 → 16 → 16)
         self.fc1 = nn.Linear(in_features=4,  out_features=16)
         self.fc2 = nn.Linear(in_features=16, out_features=16)
-        # Merge & classify layers (32 → 16 → 2)
+        # merge & classify layers (32 → 16 → 2)
         self.fc3 = nn.Linear(in_features=32, out_features=16)
         self.fc4 = nn.Linear(in_features=16, out_features=2)
 
@@ -36,7 +36,7 @@ class SiamesePairClassifier(nn.Module):
         """
         e1 = self.branch_forward(x1)    # (batch_size, 16)
         e2 = self.branch_forward(x2)    # (batch_size, 16)
-        # Concatenate embeddings along dimension‐1
+        # concatenate embeddings along dimension‐1
         cat = torch.cat([e1, e2], dim=1)  # (batch_size, 32)
         m   = F.relu(self.fc3(cat))       # (batch_size, 16)
         logits = self.fc4(m)              # (batch_size, 2)
@@ -48,29 +48,29 @@ class SiamesePairClassifier(nn.Module):
 class PairDataset(Dataset):
     def __init__(self, num_examples=1000):
         
-        self.pairs = [] # List to hold pairs of vectors, presented images next to each other
-        self.labels = [] # List to hold labels (0 for same (dax/dax, fip/fip), 1 for different(dax/fip, fip/dax))
+        self.pairs = [] # list to hold pairs of vectors, presented images next to each other
+        self.labels = [] # list to hold labels (0 for same (dax/dax, fip/fip), 1 for different(dax/fip, fip/dax))
 
-        # Anchors
+        # define anchors
         anchors = [[1, 1, 2, 2], [5, 5, 4, 4]]
 
-        # Training sets
+        # define training sets
         training_set_1 = [[5, 5, 4, 4], [5, 4, 5, 4], [1, 2, 1, 2], [2, 2, 1, 1]]
         training_set_2 = [[1, 1, 2, 2], [1, 2, 1, 2], [5, 4, 5, 4], [4, 4, 5, 5]]
 
-        # Helper Function for normalization
+        # helper Function for normalization
         def normalize(vec):
             return [(x - 1) / 4 for x in vec]
 
-        # Add all (anchor, training_set_1[*]) pairs for anchor[0]
+        # add all (anchor, training_set_1[*]) pairs for anchor[0]
         for i, v2 in enumerate(training_set_1):
             v1_norm = normalize(anchors[0])
             v2_norm = normalize(v2)
-            label = 0 if i < 2 else 1  # First two are same class, last two are different
+            label = 0 if i < 2 else 1  #first two are same class, last two are different
             self.pairs.append((v1_norm, v2_norm))
             self.labels.append(label)
 
-        # Add all (anchor, training_set_2[*]) pairs for anchor[1]
+        #add all (anchor, training_set_2[*]) pairs for anchor[1]
         for i, v2 in enumerate(training_set_2):
             v1_norm = normalize(anchors[1])
             v2_norm = normalize(v2)
@@ -78,12 +78,12 @@ class PairDataset(Dataset):
             self.pairs.append((v1_norm, v2_norm))
             self.labels.append(label)
 
-    # returns the number of pairs in the dataset
+    #returns the number of pairs in the dataset
     def __len__(self):
         return len(self.labels)
 
   
-    # returns the pair (x1, x2) and label y for the given index
+    #returns the pair (x1, x2) and label y for the given index
     def __getitem__(self, idx):
         x1, x2 = self.pairs[idx]
         y = self.labels[idx]
@@ -94,37 +94,37 @@ class PairDataset(Dataset):
 
 
 # ----------------------------
-# 3. Training Function
+# Training Function
 # ----------------------------
 def train_siamese():
-    # hyperparameters
+    #hyperparameters
     batch_size = 2
     learning_rate = 1e-3
     num_epochs = 200
 
-    #3.1 create the dataset & dataloader
+    #create the dataset & dataloader
     dataset = PairDataset(num_examples=2000)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
-    #3.2 instantiate model, loss, optimizer
+    #instantiate model, loss, optimizer
     model     = SiamesePairClassifier()
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
-    # 3.3 training loop
+    #training loop
     model.train()
     for epoch in range(num_epochs):
         running_loss = 0.0
         for x1_batch, x2_batch, y_batch in dataloader:
-            # x1_batch.shape = (batch_size, 4)
-            # x2_batch.shape = (batch_size, 4)
-            # y_batch.shape  = (batch_size,)
+            #x1_batch.shape = (batch_size, 4)
+            #x2_batch.shape = (batch_size, 4)
+            #y_batch.shape  = (batch_size,)
 
-            # Forward pass → logits: (batch_size, 2)
+            #forward pass → logits: (batch_size, 2)
             logits = model(x1_batch, x2_batch)
             loss   = criterion(logits, y_batch)
 
-            # Backprop + optimize
+            #backprop + optimize
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -134,12 +134,12 @@ def train_siamese():
         epoch_loss = running_loss / len(dataset)
         print(f"Epoch {epoch+1}/{num_epochs} – Loss: {epoch_loss:.4f}")
 
-    # 3.4 save the trained model weights
+    #save the trained model weights
     torch.save(model.state_dict(), "siamese_pair_model.pth")
     print("Training complete. Model saved to siamese_pair_model.pth.")
 
 # ----------------------------
-# 4. entry point
+#entry point
 # ----------------------------
 if __name__ == "__main__":
     train_siamese()

@@ -7,23 +7,23 @@ def normalize(vec):
     return [(x - 1) / 4 for x in vec]
 
 def test_siamese(anchor, test_vectors):
-    # Optimize for device
+    # optimize for device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # Load the trained model
-    # Ensure the model class is defined in train_siamese_custom.py
+    # load the trained model
+    # ensure the model class is defined in train_siamese_custom.py
     model = SiamesePairClassifier().to(device)
     model_path = os.path.join(os.path.dirname(__file__), "siamese_pair_model.pth")
     model.load_state_dict(torch.load(model_path, map_location=device))
     model.eval()
 
-    # Normalize and prepare anchor tensor (batch size 1)
+    # normalize and prepare anchor tensor (batch size 1)
     anchor_norm = normalize(anchor)
     print(f"Anchor vector (raw): {anchor}")
     print(f"Anchor vector (normalized): {anchor_norm}\n")
     x1 = torch.tensor([anchor_norm], dtype=torch.float32).to(device)
 
-    # Iterate over test vectors
+    # iterate over test vectors
     for i, test_vec in enumerate(test_vectors):
         test_norm = normalize(test_vec)
         x2 = torch.tensor([test_norm], dtype=torch.float32).to(device)
@@ -42,13 +42,13 @@ def test_siamese(anchor, test_vectors):
         else:
             print("  Model prediction: DIFFERENT concept (inconsistent)\n")
 
-## Main execution
+## main execution
 if __name__ == "__main__":
     anchor = [5, 5, 4, 4]
     test_vectors = [
-        [1, 2, 1, 2],
-        [5, 5, 4, 4],
-        [2, 2, 1, 1],
-        [5, 5, 4, 4],  # exact same as anchor, corrected
+        [2, 1, 2, 1],  # consistent with anchor
+        [4, 5, 4, 5],  # inconsistent with anchor
+        [1, 1, 2, 2],  # other anchor
+        [5, 5, 4, 4],  # exact same as anchor
     ]
     test_siamese(anchor, test_vectors)
